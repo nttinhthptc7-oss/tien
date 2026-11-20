@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Tính Tiền Bán Hàng</title>
+  <style>
+    :root {
+      --bg: #f3f4f6;
+      --surface: #ffffff;
+      --primary: #0f766e;
+      --primary-dark: #115e59;
+      --primary-light: #ccfbf1;
+      --accent: #ea580c;
+      --danger: #dc2626;
+      --text: #111827;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+      --radius: 14px;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); padding-bottom: 132px; }
+    header { position: sticky; top: 0; z-index: 20; background: var(--primary); color: #fff; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    header h1 { margin: 0; font-size: 18px; font-weight: 700; }
+    .btn-header { background: rgba(255, 255, 255, 0.16); color: #fff; border: 1px solid rgba(255, 255, 255, 0.28); border-radius: 10px; padding: 7px 10px; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .tabs { display: flex; background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 52px; z-index: 19; }
+    .tab-btn { flex: 1; padding: 12px 6px; border: none; background: none; font-size: 14px; font-weight: 600; color: var(--muted); border-bottom: 3px solid transparent; cursor: pointer; }
+    .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); background: #f0fdfa; }
+    .container { padding: 12px; max-width: 720px; margin: 0 auto; }
+    .hidden { display: none !important; }
+    .search-bar { width: 100%; padding: 11px 14px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); font-size: 15px; margin-bottom: 12px; user-select: text; }
+    .product-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    @media (min-width: 540px) { .product-grid { grid-template-columns: repeat(3, 1fr); } }
+    .product-card { background: var(--surface); border-radius: var(--radius); border: 2px solid transparent; box-shadow: var(--shadow); overflow: hidden; display: flex; flex-direction: column; }
+    .product-card.selected { border-color: var(--primary); background: #f0fdfa; }
+    .card-tap-area { cursor: pointer; flex: 1; display: flex; flex-direction: column; }
+    .media-box { width: 100%; aspect-ratio: 4 / 3; background: #e2e8f0; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; }
+    .media-box img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .media-emoji { font-size: 44px; line-height: 1; }
+    .media-initials { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 800; }
+    .badge-qty { position: absolute; top: 6px; right: 6px; background: var(--accent); color: #fff; font-size: 12px; font-weight: 800; padding: 3px 8px; border-radius: 999px; }
+    .badge-unit-type { position: absolute; bottom: 6px; left: 6px; background: rgba(17, 24, 39, 0.72); color: #fff; font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 6px; }
+    .card-info { padding: 9px 10px 6px; }
+    .card-title { font-size: 15px; font-weight: 700; line-height: 1.25; margin-bottom: 4px; }
+    .card-price { font-size: 14px; font-weight: 700; color: var(--primary-dark); }
+    .card-subtotal { font-size: 12px; font-weight: 700; color: var(--accent); margin-top: 2px; }
+    .card-controls { display: flex; align-items: center; justify-content: space-between; padding: 6px 8px 8px; gap: 6px; }
+    .qty-btn { width: 38px; height: 36px; border-radius: 10px; border: 1px solid var(--border); background: #f9fafb; font-size: 20px; font-weight: 700; cursor: pointer; }
+    .qty-btn.plus { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .qty-display { flex: 1; text-align: center; font-size: 15px; font-weight: 800; }
+    .weight-action-btn { flex: 1; height: 36px; border-radius: 10px; border: 1px solid var(--primary); background: #f0fdfa; color: var(--primary-dark); font-size: 13px; font-weight: 700; cursor: pointer; }
+    .weight-clear-btn { width: 36px; height: 36px; border-radius: 10px; border: 1px solid #fecaca; background: #fef2f2; color: var(--danger); font-size: 15px; font-weight: 700; cursor: pointer; }
+    .custom-items-box { background: var(--surface); border-radius: var(--radius); padding: 10px 12px; margin-bottom: 12px; box-shadow: var(--shadow); border-left: 4px solid var(--accent); }
+    .custom-item-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px dashed var(--border); font-size: 14px; }
+    .custom-item-row:last-child { border-bottom: none; }
+    .checkout-bar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); border-top: 1px solid var(--border); padding: 10px 14px 14px; z-index: 30; }
+    .checkout-inner { max-width: 720px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .total-label { font-size: 12px; color: var(--muted); font-weight: 600; }
+    .total-amount { font-size: 22px; font-weight: 800; color: var(--accent); }
+    .checkout-btns { display: flex; gap: 8px; }
+    .btn-clear { padding: 13px 14px; border-radius: 12px; border: 1px solid var(--border); background: #f9fafb; color: var(--muted); font-size: 14px; font-weight: 700; cursor: pointer; }
+    .btn-pay { padding: 13px 20px; border-radius: 12px; border: none; background: var(--primary); color: #fff; font-size: 16px; font-weight: 800; cursor: pointer; }
+    .btn-pay:disabled { background: #9ca3af; cursor: not-allowed; }
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(17, 24, 39, 0.58); z-index: 50; display: flex; align-items: flex-end; justify-content: center; }
+    @media (min-width: 540px) { .modal-backdrop { align-items: center; padding: 16px; } }
+    .modal-sheet { background: var(--surface); width: 100%; max-width: 500px; border-radius: 20px 20px 0 0; padding: 18px 16px 22px; max-height: 92vh; overflow-y: auto; }
+    @media (min-width: 540px) { .modal-sheet { border-radius: 20px; } }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .modal-title { margin: 0; font-size: 18px; font-weight: 800; }
+    .close-btn { width: 34px; height: 34px; border-radius: 50%; border: none; background: #f3f4f6; font-size: 18px; font-weight: 700; cursor: pointer; }
+    .form-group { margin-bottom: 12px; }
+    .form-label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 5px; color: #374151; }
+    .form-input, .form-select { width: 100%; padding: 11px 12px; border-radius: 10px; border: 1px solid #d1d5db; font-size: 15px; background: #fff; user-select: text; }
+    .quick-cash-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 10px 0; }
+    .cash-chip { padding: 11px 8px; border-radius: 10px; border: 1px solid #cbd5e1; background: #f8fafc; font-size: 14px; font-weight: 700; color: #0f172a; cursor: pointer; }
+    .change-box { background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 12px; padding: 12px; margin: 12px 0; display: flex; justify-content: space-between; align-items: center; }
+    .change-box.negative { background: #fef2f2; border-color: #fecaca; }
+    .unit-switch { display: flex; background: #f3f4f6; border-radius: 12px; padding: 4px; margin-bottom: 10px; }
+    .unit-switch button { flex: 1; padding: 9px; border: none; border-radius: 9px; font-size: 14px; font-weight: 700; background: transparent; color: var(--muted); cursor: pointer; }
+    .unit-switch button.active { background: var(--surface); color: var(--primary); }
+    .weight-screen { background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 10px 14px; margin-bottom: 10px; text-align: right; }
+    .weight-main-val { font-size: 28px; font-weight: 800; }
+    .weight-sub-val { font-size: 13px; color: var(--muted); margin-top: 2px; }
+    .weight-calc-price { font-size: 16px; font-weight: 800; color: var(--accent); margin-top: 4px; }
+    .preset-weights { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+    .preset-w-btn { padding: 7px 10px; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; font-size: 12px; font-weight: 700; cursor: pointer; }
+    .numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+    .num-key { padding: 14px 0; border-radius: 12px; border: 1px solid #e5e7eb; background: #f9fafb; font-size: 20px; font-weight: 700; cursor: pointer; }
+    .manage-card { background: var(--surface); border-radius: 12px; padding: 12px; margin-bottom: 10px; box-shadow: var(--shadow); }
+    .manage-item { display: flex; align-items: center; gap: 10px; background: var(--surface); padding: 10px; border-radius: 12px; margin-bottom: 8px; box-shadow: var(--shadow); }
+    .manage-thumb { width: 52px; height: 52px; border-radius: 10px; background: #e2e8f0; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; font-size: 24px; font-weight: 800; }
+    .manage-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .emoji-picker { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+    .emoji-opt { width: 38px; height: 38px; border-radius: 8px; border: 1px solid var(--border); background: #f9fafb; font-size: 20px; cursor: pointer; }
+    .btn-primary-full { width: 100%; padding: 13px; border-radius: 12px; border: none; background: var(--primary); color: #fff; font-size: 16px; font-weight: 800; cursor: pointer; }
+    .btn-secondary-full { width: 100%; padding: 11px; border-radius: 12px; border: 1px solid var(--primary); background: #f0fdfa; color: var(--primary-dark); font-size: 15px; font-weight: 700; cursor: pointer; margin-bottom: 8px; }
+    .toast { position: fixed; top: 66px; left: 50%; transform: translateX(-50%); background: rgba(17, 24, 39, 0.9); color: #fff; padding: 9px 16px; border-radius: 999px; font-size: 13px; font-weight: 600; z-index: 100; pointer-events: none; opacity: 0; transition: opacity 0.2s ease; }
+    .toast.show { opacity: 1; }
+    .color-0 { background: #fef3c7; color: #92400e; }
+    .color-1 { background: #d1fae5; color: #065f46; }
+    .color-2 { background: #dbeafe; color: #1e40af; }
+    .color-3 { background: #ffe4e6; color: #9f1239; }
+    .color-4 { background: #f3e8ff; color: #6b21a8; }
+    .color-5 { background: #ffedd5; color: #9a3412; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🧾 Tính Tiền Bán Hàng</h1>
+    <div class="header-actions">
+      <button class="btn-header" onclick="openCustomItemModal()">+ Tiền lẻ</button>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab-btn active" id="tab-pos" onclick="switchTab('pos')">Bán hàng</button>
+    <button class="tab-btn" id="tab-products" onclick="switchTab('products')">Món hàng</button>
+    <button class="tab-btn" id="tab-orders" onclick="switchTab('orders')">Đơn hàng</button>
+  </nav>
+
+  <div id="toast" class="toast"></div>
+
+  <main id="view-pos" class="container">
+    <input type="text" id="search-input" class="search-bar" placeholder="🔍 Tìm nhanh tên món..." oninput="renderProductGrid()" />
+    <div id="custom-items-container" class="custom-items-box hidden">
+      <div style="font-size: 12px; font-weight: 700; color: var(--accent); margin-bottom: 4px;">KHOẢN TIỀN LẺ TRONG ĐƠN:</div>
+      <div id="custom-items-list"></div>
+    </div>
+    <div id="product-grid" class="product-grid"></div>
+  </main>
+
+  <section id="view-products" class="container hidden">
+    <div class="manage-card">
+      <h3 id="form-heading" style="margin: 0 0 10px; font-size: 16px;">➕ Thêm món hàng mới</h3>
+      <input type="hidden" id="edit-product-id" />
+      <div class="form-group">
+        <label class="form-label">Tên món hàng *</label>
+        <input type="text" id="prod-name" class="form-input" placeholder="VD: Thịt ba rọi, Cà phê sữa..." />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Đơn vị tính *</label>
+        <select id="prod-unit" class="form-select" onchange="updatePriceLabel()">
+          <option value="unit">Cái / Ly / Phần</option>
+          <option value="kg">Kilogram (kg)</option>
+          <option value="lang">Lạng (100g)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" id="prod-price-label">Giá bán mỗi Cái / Ly / Phần (VNĐ) *</label>
+        <input type="text" inputmode="numeric" id="prod-price" class="form-input" placeholder="VD: 25.000" oninput="formatCurrencyInput(this)" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Hình ảnh / Biểu tượng món</label>
+        <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px;">
+          <div id="form-image-preview" class="manage-thumb">🍽️</div>
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
+            <label class="btn-header" style="background: var(--primary); text-align: center; display: block;">
+              📷 Chụp ảnh / Chọn từ thư viện
+              <input type="file" id="prod-file" accept="image/*" class="hidden" onchange="handleImageUpload(event)" />
+            </label>
+            <button type="button" class="btn-clear" style="padding: 6px; font-size: 12px;" onclick="clearFormImage()">Xóa ảnh (dùng chữ viết tắt)</button>
+          </div>
+        </div>
+        <input type="text" id="prod-image-url" class="form-input" placeholder="Hoặc dán đường link ảnh (https://...)" oninput="handleImageUrlInput(this.value)" />
+        <div class="emoji-picker" id="emoji-picker"></div>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button type="button" class="btn-primary-full" onclick="saveProduct()">Lưu món hàng</button>
+        <button type="button" id="cancel-edit-btn" class="btn-clear hidden" onclick="resetProductForm()">Hủy</button>
+      </div>
+    </div>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin: 14px 0 8px;">
+      <strong style="font-size: 15px;">Danh sách món hiện có (<span id="product-count">0</span>)</strong>
+    </div>
+    <div id="manage-product-list"></div>
+  </section>
+
+  <section id="view-orders" class="container hidden">
+    <div class="manage-card" style="display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <div style="font-size: 13px; color: var(--muted); font-weight: 600;">Tổng doanh thu đã lưu</div>
+        <div id="total-revenue" style="font-size: 22px; font-weight: 800; color: var(--primary);">0đ</div>
+      </div>
+      <button class="btn-clear" style="color: var(--danger); border-color: #fecaca;" onclick="clearOrderHistory()">Xóa lịch sử</button>
+    </div>
+    <div id="orders-list"></div>
+  </section>
+
+  <div id="checkout-bar" class="checkout-bar">
+    <div class="checkout-inner">
+      <div>
+        <div class="total-label">Tổng cộng (<span id="total-items-count">0</span> món)</div>
+        <div class="total-amount" id="grand-total">0đ</div>
+      </div>
+      <div class="checkout-btns">
+        <button class="btn-clear" onclick="clearCart()">Xóa đơn</button>
+        <button class="btn-pay" id="btn-open-checkout" onclick="openCheckoutModal()" disabled>Thanh toán</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="weight-modal" class="modal-backdrop hidden">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title" id="weight-modal-title">Nhập cân nặng</h3>
+          <div style="font-size: 13px; color: var(--primary-dark); font-weight: 700;" id="weight-modal-unit-price"></div>
+        </div>
+        <button class="close-btn" onclick="closeWeightModal()">✕</button>
+      </div>
+      <div class="unit-switch">
+        <button type="button" id="switch-kg" class="active" onclick="switchWeightInputUnit('kg')">Nhập theo Kilogram (kg)</button>
+        <button type="button" id="switch-lang" onclick="switchWeightInputUnit('lang')">Nhập theo Lạng (100g)</button>
+      </div>
+      <div class="weight-screen">
+        <div class="weight-main-val" id="weight-display-main">0 kg</div>
+        <div class="weight-sub-val" id="weight-display-sub">Tương đương: 0 lạng</div>
+        <div class="weight-calc-price" id="weight-display-price">Thành tiền: 0đ</div>
+      </div>
+      <div class="preset-weights">
+        <button type="button" class="preset-w-btn" onclick="setPresetKg(0.1)">1 lạng (0.1kg)</button>
+        <button type="button" class="preset-w-btn" onclick="setPresetKg(0.2)">2 lạng (0.2kg)</button>
+        <button type="button" class="preset-w-btn" onclick="setPresetKg(0.3)">3 lạng (0.3kg)</button>
+        <button type="button" class="preset-w-btn" onclick="setPresetKg(0.5)">5 lạng (0.5kg)</button>
+        <button type="button" class="preset-w-btn" onclick="setPresetKg(1)">1 kg</button>
+        <button type="button" class="preset-w-btn" onclick="setPresetKg(1.5)">1.5 kg</button>
+        <button type="button" class="preset-w-btn" onclick="setPresetKg(2)">2 kg</button>
+      </div>
+      <div class="numpad">
+        <button type="button" class="num-key" onclick="pressWeightKey('7')">7</button>
+        <button type="button" class="num-key" onclick="pressWeightKey('8')">8</button>
+        <button type="button" class="num-key" onclick="pressWeightKey('9')">9</button>
+        <button type="button" class="num-key" onclick="pressWeightKey('4')">4</button>
+        <button type="button" class="num-key" onclick="pressWeightKey('5')">5</button>
+        <button type="button" class="num-key" onclick="pressWeightKey('6')">6</button>
+        <button type="button" class="num-key" onclick="pressWeightKey('1')">1</button>
+        <button type="button" class="num-key" onclick="pressWeightKey('2')">2</button>
+        <button type="button" class="num-key" onclick="pressWeightKey('3')">3</button>
+        <button type="button" class="num-key" onclick="pressWeightKey('.')">.</button>
+        <button type="button" class="num-key" onclick="pressWeightKey('0')">0</button>
+        <button type="button" class="num-key" onclick="pressWeightKey('BACK')">⌫</button>
+      </div>
+      <button type="button" id="weight-add-more-btn" class="btn-secondary-full hidden" onclick="confirmWeight(true)">+ Cộng dồn thêm vào đơn</button>
+      <button type="button" id="weight-confirm-btn" class="btn-primary-full" onclick="confirmWeight(false)">✓ Thêm vào đơn</button>
+    </div>
+  </div>
+
+  <div id="checkout-modal" class="modal-backdrop hidden">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <h3 class="modal-title">Thanh toán đơn hàng</h3>
+        <button class="close-btn" onclick="closeCheckoutModal()">✕</button>
+      </div>
+      <div id="checkout-summary-list" style="max-height: 150px; overflow-y: auto; border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; margin-bottom: 12px; font-size: 14px;"></div>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <span style="font-weight: 700; color: var(--muted);">Khách cần trả:</span>
+        <span id="modal-total-due" style="font-size: 22px; font-weight: 800; color: var(--accent);">0đ</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tiền khách đưa (VNĐ):</label>
+        <input type="text" inputmode="numeric" id="cash-received" class="form-input" style="font-size: 20px; font-weight: 800;" placeholder="Nhập số tiền khách đưa..." oninput="onCashInput(this)" />
+      </div>
+      <div class="quick-cash-grid" id="quick-cash-buttons"></div>
+      <div id="change-display-box" class="change-box">
+        <span id="change-label" style="font-weight: 700; font-size: 15px;">Tiền thừa trả khách:</span>
+        <span id="change-amount" style="font-size: 22px; font-weight: 800; color: #15803d;">0đ</span>
+      </div>
+      <button type="button" class="btn-primary-full" onclick="completeOrder()">✓ Hoàn tất & Lưu đơn</button>
+    </div>
+  </div>
+
+  <div id="custom-modal" class="modal-backdrop hidden">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <h3 class="modal-title">Thêm khoản tiền lẻ</h3>
+        <button class="close-btn" onclick="closeCustomItemModal()">✕</button>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tên món / Ghi chú</label>
+        <input type="text" id="custom-name" class="form-input" placeholder="VD: Túi xốp, Phí giao, Món thêm..." />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Số tiền (VNĐ) *</label>
+        <input type="text" inputmode="numeric" id="custom-price" class="form-input" placeholder="VD: 10.000" oninput="formatCurrencyInput(this)" />
+      </div>
+      <button type="button" class="btn-primary-full" onclick="addCustomItem()">Thêm vào đơn hiện tại</button>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEYS = { PRODUCTS: 'pos_mobile_products_v3', ORDERS: 'pos_mobile_orders_v3' };
+    const DEFAULT_PRODUCTS = [
+      { id: 'p1', name: 'Thịt ba rọi heo', price: 150000, unit: 'kg', image: 'emoji:🥩' },
+      { id: 'p2', name: 'Tôm sú tươi', price: 240000, unit: 'kg', image: 'emoji:🦐' },
+      { id: 'p3', name: 'Chả lụa đặc biệt', price: 18000, unit: 'lang', image: 'emoji:🍖' },
+      { id: 'p4', name: 'Hạt điều rang muối', price: 28000, unit: 'lang', image: 'emoji:🥜' },
+      { id: 'p5', name: 'Xoài cát Hòa Lộc', price: 45000, unit: 'kg', image: 'emoji:🥭' },
+      { id: 'p6', name: 'Cà phê sữa đá', price: 25000, unit: 'unit', image: 'emoji:🧋' },
+      { id: 'p7', name: 'Trà đào cam sả', price: 35000, unit: 'unit', image: 'emoji:🍹' },
+      { id: 'p8', name: 'Bánh mì thịt chả', price: 20000, unit: 'unit', image: 'emoji:🥖' }
+    ];
+    const PRESET_EMOJIS = ['🥩', '🍗', '🐟', '🦐', '🦀', '🥬', '🍅', '🥭', '🍌', '🍉', '🍚', '🍜', '🥖', '🍱', '🧋', '☕', '🍹', '🧃', '🍰', '📦'];
+    let products = [], orders = [], cart = {}, customItems = [], currentFormImage = 'emoji:🍽️';
+    let activeWeightProductId = null, weightInputUnit = 'kg', weightRawString = '', toastTimer = null;
+
+    function loadData() {
+      try {
+        const savedProducts = localStorage.getItem(STORAGE_KEYS.PRODUCTS);
+        products = savedProducts ? JSON.parse(savedProducts).map(p => ({ ...p, unit: p.unit || 'unit' })) : [...DEFAULT_PRODUCTS];
+        if (!savedProducts) saveProductsToStorage();
+        const savedOrders = localStorage.getItem(STORAGE_KEYS.ORDERS);
+        orders = savedOrders ? JSON.parse(savedOrders) : [];
+      } catch (e) { products = [...DEFAULT_PRODUCTS]; orders = []; }
+    }
+    function saveProductsToStorage() { localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products)); }
+    function saveOrdersToStorage() { localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(orders)); }
+    function formatVND(amount) { return Math.round(Number(amount) || 0).toLocaleString('vi-VN') + 'đ'; }
+    function parseCurrency(str) { return Number(String(str || '').replace(/[^\d]/g, '')) || 0; }
+    function formatCurrencyInput(inputEl) { const raw = parseCurrency(inputEl.value); inputEl.value = raw > 0 ? raw.toLocaleString('vi-VN') : ''; }
+    function roundWeight(val) { return Math.round((Number(val) || 0) * 1000) / 1000; }
+    function escapeHTML(str) { return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+    function getInitials(name) { const parts = String(name || '').trim().split(/\s+/); return parts.length === 1 ? parts[0].slice(0, 2).toUpperCase() : (parts[0][0] + parts[parts.length - 1][0]).toUpperCase(); }
+    function getUnitSuffix(unit) { return unit === 'kg' ? ' / kg' : (unit === 'lang' ? ' / lạng' : ''); }
+    function calculateProductLineTotal(prod, val) {
+      const n = Number(val) || 0;
+      if (n <= 0) return 0;
+      if (prod.unit === 'lang') return Math.round(prod.price * roundWeight(n * 10));
+      return Math.round(prod.price * n);
+    }
+    function formatQuantityOrWeightLabel(prod, val) {
+      if (prod.unit === 'kg' || prod.unit === 'lang') return roundWeight(val) + ' kg (' + roundWeight(val * 10) + ' lạng)';
+      return 'x' + val;
+    }
+    function formatCardBadgeText(prod, val) {
+      if (prod.unit === 'kg' || prod.unit === 'lang') {
+        const kgVal = roundWeight(val), langVal = roundWeight(val * 10);
+        return (prod.unit === 'lang' && kgVal < 1) ? langVal + ' lạng' : kgVal + ' kg';
+      }
+      return String(val);
+    }
+    function showToast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg; el.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove('show'), 1800);
+    }
+    function renderMediaContent(prod, index) {
+      const img = prod.image || '';
+      if (img.startsWith('emoji:')) return '<span class="media-emoji">' + escapeHTML(img.slice(6) || '🍽️') + '</span>';
+      if (img.startsWith('data:image') || img.startsWith('http://') || img.startsWith('https://')) return '<img src="' + escapeHTML(img) + '" alt="' + escapeHTML(prod.name) + '" />';
+      return '<div class="media-initials color-' + (index % 6) + '">' + escapeHTML(getInitials(prod.name)) + '</div>';
+    }
+    function renderProductGrid() {
+      const grid = document.getElementById('product-grid');
+      const keyword = (document.getElementById('search-input').value || '').toLowerCase().trim();
+      const filtered = products.filter(p => p.name.toLowerCase().includes(keyword));
+      if (filtered.length === 0) { grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 28px 12px; color: var(--muted);">Không tìm thấy món phù hợp.</div>'; return; }
+      grid.innerHTML = filtered.map((prod, idx) => {
+        const qty = cart[prod.id] || 0, isSelected = qty > 0, isWeighted = prod.unit === 'kg' || prod.unit === 'lang';
+        const lineSubtotal = isSelected ? calculateProductLineTotal(prod, qty) : 0;
+        const tapAction = isWeighted ? 'openWeightModal('' + prod.id + '')' : 'updateCartQty('' + prod.id + '', 1)';
+        let controlsHtml = isWeighted
+          ? (isSelected ? '<button type="button" class="weight-clear-btn" onclick="removeWeightedItem('' + prod.id + '')">✕</button><button type="button" class="weight-action-btn" onclick="openWeightModal('' + prod.id + '')">Sửa (' + roundWeight(qty * 10) + ' lạng)</button>' : '<button type="button" class="weight-action-btn" onclick="openWeightModal('' + prod.id + '')">⚖️ Nhập cân nặng</button>')
+          : '<button type="button" class="qty-btn" onclick="updateCartQty('' + prod.id + '', -1)">−</button><div class="qty-display">' + (qty > 0 ? qty : '0') + '</div><button type="button" class="qty-btn plus" onclick="updateCartQty('' + prod.id + '', 1)">+</button>';
+        return '<div class="product-card ' + (isSelected ? 'selected' : '') + '"><div class="card-tap-area" onclick="' + tapAction + '"><div class="media-box">' + renderMediaContent(prod, idx) + (isWeighted ? '<span class="badge-unit-type">' + (prod.unit === 'kg' ? 'Theo kg' : 'Theo lạng') + '</span>' : '') + (isSelected ? '<span class="badge-qty">' + formatCardBadgeText(prod, qty) + '</span>' : '') + '</div><div class="card-info"><div class="card-title">' + escapeHTML(prod.name) + '</div><div class="card-price">' + formatVND(prod.price) + getUnitSuffix(prod.unit) + '</div>' + (isSelected && isWeighted ? '<div class="card-subtotal">= ' + formatVND(lineSubtotal) + '</div>' : '') + '</div></div><div class="card-controls">' + controlsHtml + '</div></div>';
+      }).join('');
+    }
+    function updateCartQty(productId, delta) { const next = (cart[productId] || 0) + delta; if (next <= 0) delete cart[productId]; else cart[productId] = next; updateAllUI(); }
+    function removeWeightedItem(productId) { delete cart[productId]; updateAllUI(); showToast('Đã bỏ món khỏi đơn'); }
+    function openWeightModal(productId) {
+      const prod = products.find(p => p.id === productId); if (!prod) return;
+      activeWeightProductId = productId; weightInputUnit = prod.unit === 'lang' ? 'lang' : 'kg';
+      const existingKg = cart[productId] || 0;
+      if (existingKg > 0) {
+        weightRawString = String(weightInputUnit === 'kg' ? roundWeight(existingKg) : roundWeight(existingKg * 10));
+        document.getElementById('weight-confirm-btn').textContent = '✓ Cập nhật mới';
+        document.getElementById('weight-add-more-btn').classList.remove('hidden');
+      } else {
+        weightRawString = '';
+        document.getElementById('weight-confirm-btn').textContent = '✓ Thêm vào đơn';
+        document.getElementById('weight-add-more-btn').classList.add('hidden');
+      }
+      document.getElementById('weight-modal-title').textContent = prod.name;
+      document.getElementById('weight-modal-unit-price').textContent = 'Đơn giá: ' + formatVND(prod.price) + getUnitSuffix(prod.unit);
+      updateWeightModalUI(); document.getElementById('weight-modal').classList.remove('hidden');
+    }
+    function closeWeightModal() { document.getElementById('weight-modal').classList.add('hidden'); activeWeightProductId = null; }
+    function switchWeightInputUnit(targetUnit) {
+      if (weightInputUnit === targetUnit) return;
+      const cur = parseFloat(weightRawString) || 0;
+      if (cur > 0) weightRawString = String(targetUnit === 'lang' ? roundWeight(cur * 10) : roundWeight(cur / 10));
+      weightInputUnit = targetUnit; updateWeightModalUI();
+    }
+    function setPresetKg(kgVal) { weightRawString = String(weightInputUnit === 'kg' ? roundWeight(kgVal) : roundWeight(kgVal * 10)); updateWeightModalUI(); }
+    function pressWeightKey(key) {
+      if (key === 'BACK') weightRawString = weightRawString.slice(0, -1);
+      else if (key === '.') { if (!weightRawString.includes('.')) weightRawString = weightRawString === '' ? '0.' : weightRawString + '.'; }
+      else { if (weightRawString === '0') weightRawString = key; else if (weightRawString.length < 7) weightRawString += key; }
+      updateWeightModalUI();
+    }
+    function getEnteredKgValue() { const num = parseFloat(weightRawString) || 0; return num <= 0 ? 0 : (weightInputUnit === 'kg' ? roundWeight(num) : roundWeight(num / 10)); }
+    function updateWeightModalUI() {
+      document.getElementById('switch-kg').classList.toggle('active', weightInputUnit === 'kg');
+      document.getElementById('switch-lang').classList.toggle('active', weightInputUnit === 'lang');
+      const prod = products.find(p => p.id === activeWeightProductId), kgVal = getEnteredKgValue(), langVal = roundWeight(kgVal * 10), disp = weightRawString === '' ? '0' : weightRawString;
+      if (weightInputUnit === 'kg') { document.getElementById('weight-display-main').textContent = disp + ' kg'; document.getElementById('weight-display-sub').textContent = 'Tương đương: ' + langVal + ' lạng'; }
+      else { document.getElementById('weight-display-main').textContent = disp + ' lạng'; document.getElementById('weight-display-sub').textContent = 'Tương đương: ' + kgVal + ' kg'; }
+      document.getElementById('weight-display-price').textContent = 'Thành tiền: ' + formatVND(prod ? calculateProductLineTotal(prod, kgVal) : 0);
+    }
+    function confirmWeight(isAddMore) {
+      if (!activeWeightProductId) return;
+      const enteredKg = getEnteredKgValue();
+      if (enteredKg <= 0) { showToast('Vui lòng nhập cân nặng lớn hơn 0'); return; }
+      cart[activeWeightProductId] = (isAddMore && cart[activeWeightProductId]) ? roundWeight(cart[activeWeightProductId] + enteredKg) : enteredKg;
+      closeWeightModal(); updateAllUI(); showToast(isAddMore ? 'Đã cộng dồn cân nặng' : 'Đã cập nhật cân nặng');
+    }
+    function getCartTotals() {
+      let totalAmount = 0, itemCount = 0;
+      for (const prod of products) { const val = cart[prod.id] || 0; if (val > 0) { totalAmount += calculateProductLineTotal(prod, val); itemCount += (prod.unit === 'kg' || prod.unit === 'lang') ? 1 : val; } }
+      for (const item of customItems) { totalAmount += item.price; itemCount += 1; }
+      return { totalAmount, itemCount };
+    }
+    function renderCustomItems() {
+      const box = document.getElementById('custom-items-container'), list = document.getElementById('custom-items-list');
+      if (customItems.length === 0) { box.classList.add('hidden'); return; }
+      box.classList.remove('hidden');
+      list.innerHTML = customItems.map((item, i) => '<div class="custom-item-row"><span>' + escapeHTML(item.name) + '</span><div style="display:flex;align-items:center;gap:8px;"><strong>' + formatVND(item.price) + '</strong><button type="button" onclick="removeCustomItem(' + i + ')" style="border:none;background:#fee2e2;color:#dc2626;border-radius:6px;padding:2px 7px;font-weight:700;">✕</button></div></div>').join('');
+    }
+    function updateAllUI() {
+      renderProductGrid(); renderCustomItems();
+      const { totalAmount, itemCount } = getCartTotals();
+      document.getElementById('grand-total').textContent = formatVND(totalAmount);
+      document.getElementById('total-items-count').textContent = itemCount;
+      document.getElementById('btn-open-checkout').disabled = totalAmount <= 0;
+    }
+    function clearCart() { cart = {}; customItems = []; updateAllUI(); showToast('Đã xóa đơn hiện tại'); }
+    function openCustomItemModal() { document.getElementById('custom-name').value = ''; document.getElementById('custom-price').value = ''; document.getElementById('custom-modal').classList.remove('hidden'); }
+    function closeCustomItemModal() { document.getElementById('custom-modal').classList.add('hidden'); }
+    function addCustomItem() {
+      const name = document.getElementById('custom-name').value.trim() || 'Khoản tiền lẻ', price = parseCurrency(document.getElementById('custom-price').value);
+      if (price <= 0) { showToast('Vui lòng nhập số tiền hợp lệ'); return; }
+      customItems.push({ id: 'c_' + Date.now(), name, price }); closeCustomItemModal(); updateAllUI(); showToast('Đã thêm khoản tiền lẻ');
+    }
+    function removeCustomItem(i) { customItems.splice(i, 1); updateAllUI(); }
+    function openCheckoutModal() {
+      const { totalAmount } = getCartTotals(); if (totalAmount <= 0) return;
+      const lines = [];
+      for (const prod of products) { const val = cart[prod.id] || 0; if (val > 0) lines.push('<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed #e5e7eb;"><span>' + escapeHTML(prod.name) + ' <strong style="color:var(--primary);">(' + formatQuantityOrWeightLabel(prod, val) + ')</strong></span><strong>' + formatVND(calculateProductLineTotal(prod, val)) + '</strong></div>'); }
+      for (const item of customItems) lines.push('<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed #e5e7eb;"><span>' + escapeHTML(item.name) + '</span><strong>' + formatVND(item.price) + '</strong></div>');
+      document.getElementById('checkout-summary-list').innerHTML = lines.join('');
+      document.getElementById('modal-total-due').textContent = formatVND(totalAmount);
+      document.getElementById('cash-received').value = totalAmount.toLocaleString('vi-VN');
+      const suggestions = [totalAmount, 50000, 100000, 200000, 500000].filter((v, idx, arr) => v >= totalAmount && arr.indexOf(v) === idx).slice(0, 4);
+      document.getElementById('quick-cash-buttons').innerHTML = suggestions.map(amt => '<button type="button" class="cash-chip" onclick="setQuickCash(' + amt + ')">' + (amt === totalAmount ? 'Đưa đủ (' + formatVND(amt) + ')' : formatVND(amt)) + '</button>').join('');
+      calculateChange(); document.getElementById('checkout-modal').classList.remove('hidden');
+    }
+    function closeCheckoutModal() { document.getElementById('checkout-modal').classList.add('hidden'); }
+    function setQuickCash(amt) { document.getElementById('cash-received').value = amt.toLocaleString('vi-VN'); calculateChange(); }
+    function onCashInput(el) { formatCurrencyInput(el); calculateChange(); }
+    function calculateChange() {
+      const { totalAmount } = getCartTotals(), received = parseCurrency(document.getElementById('cash-received').value), diff = received - totalAmount;
+      const box = document.getElementById('change-display-box'), label = document.getElementById('change-label'), amountEl = document.getElementById('change-amount');
+      if (diff >= 0) { box.classList.remove('negative'); label.textContent = 'Tiền thừa trả khách:'; amountEl.style.color = '#15803d'; amountEl.textContent = formatVND(diff); }
+      else { box.classList.add('negative'); label.textContent = 'Khách đưa còn thiếu:'; amountEl.style.color = '#dc2626'; amountEl.textContent = formatVND(Math.abs(diff)); }
+    }
+    function completeOrder() {
+      const { totalAmount } = getCartTotals(); if (totalAmount <= 0) return;
+      const received = parseCurrency(document.getElementById('cash-received').value), itemsSummary = [];
+      for (const prod of products) { const val = cart[prod.id] || 0; if (val > 0) itemsSummary.push({ name: prod.name, qtyLabel: formatQuantityOrWeightLabel(prod, val), subtotal: calculateProductLineTotal(prod, val) }); }
+      for (const item of customItems) itemsSummary.push({ name: item.name, qtyLabel: 'x1', subtotal: item.price });
+      const now = new Date(), timeStr = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) + ' - ' + now.toLocaleDateString('vi-VN');
+      orders.unshift({ id: 'ORD_' + Date.now(), time: timeStr, total: totalAmount, received: received > 0 ? received : totalAmount, change: Math.max(0, (received > 0 ? received : totalAmount) - totalAmount), items: itemsSummary });
+      saveOrdersToStorage(); cart = {}; customItems = []; closeCheckoutModal(); updateAllUI(); renderOrders(); showToast('✓ Đã lưu đơn hàng thành công!');
+    }
+    function switchTab(tabName) {
+      ['pos', 'products', 'orders'].forEach(t => {
+        document.getElementById('tab-' + t).classList.toggle('active', t === tabName);
+        document.getElementById('view-' + t).classList.toggle('hidden', t !== tabName);
+      });
+      document.getElementById('checkout-bar').classList.toggle('hidden', tabName !== 'pos');
+      if (tabName === 'products') renderManageProductList();
+      if (tabName === 'orders') renderOrders();
+    }
+    function initEmojiPicker() { document.getElementById('emoji-picker').innerHTML = PRESET_EMOJIS.map(em => '<button type="button" class="emoji-opt" onclick="selectPresetEmoji('' + em + '')">' + em + '</button>').join(''); }
+    function selectPresetEmoji(emoji) { currentFormImage = 'emoji:' + emoji; document.getElementById('prod-image-url').value = ''; updateFormPreview(); }
+    function handleImageUrlInput(url) { currentFormImage = url.trim(); updateFormPreview(); }
+    function clearFormImage() { currentFormImage = ''; document.getElementById('prod-image-url').value = ''; document.getElementById('prod-file').value = ''; updateFormPreview(); }
+    function updateFormPreview() {
+      const p = document.getElementById('form-image-preview');
+      if (currentFormImage.startsWith('emoji:')) p.innerHTML = escapeHTML(currentFormImage.slice(6));
+      else if (currentFormImage) p.innerHTML = '<img src="' + escapeHTML(currentFormImage) + '" alt="preview" />';
+      else p.innerHTML = escapeHTML(getInitials(document.getElementById('prod-name').value || 'AA'));
+    }
+    function handleImageUpload(event) {
+      const file = event.target.files && event.target.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas'), MAX = 320;
+          let w = img.width, h = img.height;
+          if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX; } } else { if (h > MAX) { w *= MAX / h; h = MAX; } }
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          currentFormImage = canvas.toDataURL('image/jpeg', 0.72);
+          document.getElementById('prod-image-url').value = ''; updateFormPreview(); showToast('Đã tải & nén ảnh món');
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+    function updatePriceLabel() {
+      const u = document.getElementById('prod-unit').value, l = document.getElementById('prod-price-label');
+      l.textContent = u === 'kg' ? 'Giá bán mỗi Kilogram - 1 kg (VNĐ) *' : (u === 'lang' ? 'Giá bán mỗi Lạng - 100g (VNĐ) *' : 'Giá bán mỗi Cái / Ly / Phần (VNĐ) *');
+    }
+    function saveProduct() {
+      const editId = document.getElementById('edit-product-id').value, name = document.getElementById('prod-name').value.trim(), unit = document.getElementById('prod-unit').value, price = parseCurrency(document.getElementById('prod-price').value);
+      if (!name || price <= 0) { showToast('Vui lòng nhập tên món và giá bán'); return; }
+      if (editId) { const i = products.findIndex(p => p.id === editId); if (i !== -1) products[i] = { ...products[i], name, unit, price, image: currentFormImage }; showToast('Đã cập nhật món hàng'); }
+      else { products.unshift({ id: 'p_' + Date.now(), name, unit, price, image: currentFormImage }); showToast('Đã thêm món hàng mới'); }
+      saveProductsToStorage(); resetProductForm(); renderManageProductList(); updateAllUI();
+    }
+    function editProduct(id) {
+      const prod = products.find(p => p.id === id); if (!prod) return;
+      document.getElementById('form-heading').textContent = '✏️ Sửa món hàng';
+      document.getElementById('edit-product-id').value = prod.id;
+      document.getElementById('prod-name').value = prod.name;
+      document.getElementById('prod-unit').value = prod.unit || 'unit';
+      updatePriceLabel(); document.getElementById('prod-price').value = prod.price.toLocaleString('vi-VN');
+      currentFormImage = prod.image || '';
+      document.getElementById('prod-image-url').value = (currentFormImage.startsWith('http://') || currentFormImage.startsWith('https://')) ? currentFormImage : '';
+      updateFormPreview(); document.getElementById('cancel-edit-btn').classList.remove('hidden'); window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    function resetProductForm() {
+      document.getElementById('form-heading').textContent = '➕ Thêm món hàng mới';
+      document.getElementById('edit-product-id').value = ''; document.getElementById('prod-name').value = '';
+      document.getElementById('prod-unit').value = 'unit'; updatePriceLabel();
+      document.getElementById('prod-price').value = ''; document.getElementById('prod-image-url').value = '';
+      document.getElementById('prod-file').value = ''; currentFormImage = 'emoji:🍽️';
+      updateFormPreview(); document.getElementById('cancel-edit-btn').classList.add('hidden');
+    }
+    function deleteProduct(id) { products = products.filter(p => p.id !== id); delete cart[id]; saveProductsToStorage(); renderManageProductList(); updateAllUI(); showToast('Đã xóa món hàng'); }
+    function renderManageProductList() {
+      document.getElementById('product-count').textContent = products.length;
+      document.getElementById('manage-product-list').innerHTML = products.map((prod, idx) => '<div class="manage-item"><div class="manage-thumb">' + renderMediaContent(prod, idx) + '</div><div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:15px;">' + escapeHTML(prod.name) + '</div><div style="font-size:13px;color:var(--primary-dark);font-weight:700;">' + formatVND(prod.price) + getUnitSuffix(prod.unit) + '</div></div><button type="button" class="btn-clear" style="padding:7px 10px;" onclick="editProduct('' + prod.id + '')">Sửa</button><button type="button" class="btn-clear" style="padding:7px 10px;color:var(--danger);" onclick="deleteProduct('' + prod.id + '')">Xóa</button></div>').join('');
+    }
+    function renderOrders() {
+      document.getElementById('total-revenue').textContent = formatVND(orders.reduce((s, o) => s + (o.total || 0), 0));
+      const list = document.getElementById('orders-list');
+      if (orders.length === 0) { list.innerHTML = '<div style="text-align:center;padding:28px;color:var(--muted);">Chưa có đơn hàng nào được lưu.</div>'; return; }
+      list.innerHTML = orders.map(o => '<div class="manage-card"><div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:12px;color:var(--muted);font-weight:600;">🕒 ' + escapeHTML(o.time) + '</span><strong style="font-size:16px;color:var(--accent);">' + formatVND(o.total) + '</strong></div><div style="font-size:13px;color:#374151;line-height:1.45;">' + o.items.map(it => '• ' + escapeHTML(it.name) + ' (' + escapeHTML(it.qtyLabel) + '): ' + formatVND(it.subtotal)).join('<br/>') + '</div><div style="font-size:12px;color:var(--muted);margin-top:6px;border-top:1px dashed var(--border);padding-top:5px;">Khách đưa: ' + formatVND(o.received) + ' | Tiền thừa: ' + formatVND(o.change) + '</div></div>').join('');
+    }
+    function clearOrderHistory() { orders = []; saveOrdersToStorage(); renderOrders(); showToast('Đã xóa toàn bộ lịch sử đơn'); }
+    loadData(); initEmojiPicker(); updateAllUI();
+  </script>
+</body>
+</html>
